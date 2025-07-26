@@ -17,13 +17,14 @@ set [ find default=yes ] supplicant-identity=MikroTik
 /ip pool
 add name=local_pool ranges=192.168.88.100-192.168.88.254
 /ip dhcp-server
-add address-pool=local_pool disabled=no interface=bridge1 name=dhcp1
+add address-pool=local_pool disabled=no interface=bridge1 lease-time=12h \
+    name=dhcp1
 /interface bridge port
 add bridge=bridge1 interface=ether3
 add bridge=bridge1 interface=ether4
 add bridge=bridge1 interface=ether5
 /ip neighbor discovery-settings
-set discover-interface-list=!LAN
+set discover-interface-list=!all
 /interface list member
 add interface=ether1 list=WAN
 add interface=ether2 list=WAN
@@ -33,12 +34,20 @@ add interface=ether5 list=LAN
 /ip address
 add address=192.168.88.1/24 interface=bridge1 network=192.168.88.0
 /ip dhcp-client
-add comment=dchp_primary disabled=no interface=ether1
+add comment=dchp_primary disabled=no interface=ether1 use-peer-dns=no
 add comment=dhcp_backup disabled=no interface=ether2
+/ip dhcp-server lease
+add address=192.168.88.245 client-id=1:1c:ea:ac:8:e1:5a mac-address=\
+    1C:EA:AC:08:E1:5A server=dhcp1
 /ip dhcp-server network
-add address=192.168.88.0/24 gateway=192.168.88.1
+add address=192.168.88.0/24 dns-server=192.168.88.1 gateway=192.168.88.1
 /ip dns
-set servers=8.8.8.8,1.1.1.1
+set allow-remote-requests=yes servers=8.8.8.8,1.1.1.1
+/ip firewall filter
+add action=drop chain=forward comment="Block LAN to MGTS (ZTE)" dst-address=\
+    192.168.1.0/24 src-address=192.168.88.0/24
+add action=drop chain=forward comment="Block MGTS to LAN" dst-address=\
+    192.168.88.0/24 src-address=192.168.1.0/24
 /ip firewall mangle
 add action=mark-routing chain=prerouting disabled=yes dst-address=8.8.8.8 \
     new-routing-mark=to_8888 passthrough=yes protocol=tcp
